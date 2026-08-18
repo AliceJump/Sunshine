@@ -4,7 +4,7 @@ name: Build Windows (verify)
 on:
   push:
     branches:
-      - fix/native-pen-touch-default-master
+      - ci/verify-build
   workflow_dispatch:
 
 jobs:
