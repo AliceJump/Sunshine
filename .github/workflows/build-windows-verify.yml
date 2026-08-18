@@ -66,8 +66,25 @@ jobs:
           Start-Process -FilePath .\doxygen-setup.exe -ArgumentList '/VERYSILENT' -Wait -NoNewWindow
           Remove-Item -Path doxygen-setup.exe
 
-      - name: Build Sunshine
+      - name: Setup NodeJS
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: 'lts/*'
+
+      - name: NodeJS Path
+        shell: pwsh
         run: |
+          $NODEJS_BINARY_PATH = (Get-Command node).Source
+          $NODEJS_PATH = Split-Path -Path "$NODEJS_BINARY_PATH" -Parent
+          echo "NODEJS_PATH=$NODEJS_PATH" >> $env:GITHUB_ENV
+
+      - name: Build Sunshine
+        shell: msys2 {0}
+        env:
+          MSYS2_PATH_TYPE: inherit
+        run: |
+          NODEJS_PATH=$(cygpath "$NODEJS_PATH")
+          export PATH="$PATH:$NODEJS_PATH"
           mkdir -p build
           cmake \
             -B build \
