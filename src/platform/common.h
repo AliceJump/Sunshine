@@ -116,6 +116,7 @@ namespace platf {
     rumble_triggers,  ///< Rumble triggers
     set_motion_event_state,  ///< Set motion event state
     set_rgb_led,  ///< Set RGB LED
+    set_player_leds,  ///< Set player indicator LEDs
     set_adaptive_triggers,  ///< Set adaptive triggers
   };
 
@@ -190,6 +191,22 @@ namespace platf {
     }
 
     /**
+     * @brief Create player indicator LED state.
+     *
+     * @param id Identifier for the controller, session, display, or resource.
+     * @param solid Four-bit mask of solid player indicators.
+     * @param flashing Four-bit mask of flashing player indicators.
+     * @return Constructed player indicator LED object.
+     */
+    static gamepad_feedback_msg_t make_player_leds(std::uint16_t id, std::uint8_t solid, std::uint8_t flashing) {
+      gamepad_feedback_msg_t msg;
+      msg.type = gamepad_feedback_e::set_player_leds;
+      msg.id = id;
+      msg.data.player_leds = {solid, flashing};
+      return msg;
+    }
+
+    /**
      * @brief Create adaptive triggers.
      *
      * @param id Identifier for the controller, session, display, or resource.
@@ -213,34 +230,39 @@ namespace platf {
 
     union {
       struct {
-        std::uint16_t lowfreq;
-        std::uint16_t highfreq;
-      } rumble;
+        std::uint16_t lowfreq;  ///< Low-frequency rumble motor intensity.
+        std::uint16_t highfreq;  ///< High-frequency rumble motor intensity.
+      } rumble;  ///< Main rumble-motor payload.
 
       struct {
-        std::uint16_t left_trigger;
-        std::uint16_t right_trigger;
-      } rumble_triggers;
+        std::uint16_t left_trigger;  ///< Left-trigger rumble motor intensity.
+        std::uint16_t right_trigger;  ///< Right-trigger rumble motor intensity.
+      } rumble_triggers;  ///< Trigger-rumble payload.
 
       struct {
-        std::uint16_t report_rate;
-        std::uint8_t motion_type;
-      } motion_event_state;
+        std::uint16_t report_rate;  ///< Requested motion-sensor report rate.
+        std::uint8_t motion_type;  ///< Motion-sensor type to configure.
+      } motion_event_state;  ///< Motion-event configuration payload.
 
       struct {
-        std::uint8_t r;
-        std::uint8_t g;
-        std::uint8_t b;
-      } rgb_led;
+        std::uint8_t r;  ///< Red LED channel intensity.
+        std::uint8_t g;  ///< Green LED channel intensity.
+        std::uint8_t b;  ///< Blue LED channel intensity.
+      } rgb_led;  ///< RGB LED payload.
 
       struct {
-        uint16_t controllerNumber;
-        uint8_t event_flags;
-        uint8_t type_left;
-        uint8_t type_right;
-        std::array<uint8_t, 10> left;
-        std::array<uint8_t, 10> right;
-      } adaptive_triggers;
+        std::uint8_t solid;  ///< Bit mask of solid player indicators.
+        std::uint8_t flashing;  ///< Bit mask of flashing player indicators.
+      } player_leds;  ///< Player-indicator LED payload.
+
+      struct {
+        uint16_t controllerNumber;  ///< Controller number supplied to the adaptive-trigger backend.
+        uint8_t event_flags;  ///< Flags describing which adaptive-trigger data is present.
+        uint8_t type_left;  ///< Left adaptive-trigger effect type.
+        uint8_t type_right;  ///< Right adaptive-trigger effect type.
+        std::array<uint8_t, 10> left;  ///< Left adaptive-trigger effect parameters.
+        std::array<uint8_t, 10> right;  ///< Right adaptive-trigger effect parameters.
+      } adaptive_triggers;  ///< Adaptive-trigger effect payload.
     } data;  ///< Controller feedback payload for the selected feedback type.
   };
 
@@ -380,9 +402,9 @@ namespace platf {
      */
     constexpr caps_t pen_touch = 0x01;  // Pen and touch events
     /**
-     * @brief Capability bit indicating controller touchpad support.
+     * @brief Capability bit indicating controller touchpad and motion support.
      */
-    constexpr caps_t controller_touch = 0x02;  // Controller touch events
+    constexpr caps_t controller_touch = 0x02;  // Controller touch and motion events
   };  // namespace platform_caps
 
   /**
@@ -949,7 +971,7 @@ namespace platf {
    *
    * @param name Human-readable name to assign.
    */
-  void set_thread_name(const std::string &name);
+  void set_thread_name(std::string_view name);
 
   void enable_mouse_keys();
 

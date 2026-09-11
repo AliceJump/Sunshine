@@ -9,6 +9,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // lib includes
@@ -34,6 +35,16 @@ namespace platf::virtualhid {
      * @param backend Backend used to create the libvirtualhid runtime.
      */
     explicit input_context_t(lvh::BackendKind backend);
+
+    /**
+     * @brief Recreate the shared keyboard using the runtime's current driver and license state.
+     */
+    void refresh_keyboard();
+
+    /**
+     * @brief Recreate the shared mouse using the runtime's current driver and license state.
+     */
+    void refresh_mouse();
 
     std::unique_ptr<lvh::Runtime> runtime;  ///< libvirtualhid runtime.
     std::unique_ptr<lvh::Keyboard> keyboard;  ///< Shared virtual keyboard.
@@ -95,9 +106,45 @@ namespace platf::virtualhid {
    *
    * @param runtime Runtime to probe.
    * @param fallback_vigem_available Whether Windows ViGEm fallback can create gamepads.
+   * @param virtualhid_licensed Whether an installed-driver runtime has a valid license.
    * @return Supported gamepad choices.
    */
-  std::vector<supported_gamepad_t> supported_gamepads(lvh::Runtime *runtime, bool fallback_vigem_available = false);
+  std::vector<supported_gamepad_t> supported_gamepads(
+    lvh::Runtime *runtime,
+    bool fallback_vigem_available = false,
+    bool virtualhid_licensed = true
+  );
+
+  /**
+   * @brief Decide whether a libvirtualhid runtime may create a gamepad.
+   *
+   * @param capabilities Runtime backend capabilities.
+   * @param gamepad_driver Configured Windows virtual gamepad driver policy.
+   * @param virtualhid_licensed Whether the Virtual HID Driver machine license is valid.
+   * @return True when the libvirtualhid runtime should receive gamepad allocations.
+   */
+  bool should_use_gamepad_runtime(
+    const lvh::BackendCapabilities &capabilities,
+    std::string_view gamepad_driver,
+    bool virtualhid_licensed
+  );
+
+  /**
+   * @brief Decide whether ViGEmBus should be tried for a gamepad allocation.
+   *
+   * When Virtual HID Driver is unavailable or deliberately bypassed, ViGEmBus
+   * uses automatic selection for profiles it cannot represent directly.
+   *
+   * @param configured_gamepad Configured virtual gamepad profile.
+   * @param virtualhid_selected Whether Virtual HID Driver was selected for the allocation.
+   * @param gamepad_driver Configured Windows virtual gamepad driver policy.
+   * @return True when Sunshine should attempt the ViGEmBus fallback.
+   */
+  bool should_try_vigembus_fallback(
+    std::string_view configured_gamepad,
+    bool virtualhid_selected,
+    std::string_view gamepad_driver
+  );
 
   /**
    * @brief Allocate a libvirtualhid gamepad.
@@ -268,5 +315,15 @@ namespace platf::virtualhid {
    * @return True when controller touchpad input should be advertised.
    */
   bool configured_gamepad_supports_touchpad();
+
+  /**
+   * @brief Return whether the configured gamepad profile needs Moonlight controller extensions.
+   *
+   * Moonlight uses the controller-touch feature flag to authorize both controller
+   * touchpad and motion packets.
+   *
+   * @return True when controller touchpad or motion input should be advertised.
+   */
+  bool configured_gamepad_supports_controller_extensions();
 
 }  // namespace platf::virtualhid
